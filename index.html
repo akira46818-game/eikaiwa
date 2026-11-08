@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>しゃべって英会話</title>
+<style>
+body{font-family:sans-serif;background:#f3f7ff;margin:0;padding:16px;max-width:560px;margin:auto}
+h1{font-size:22px;text-align:center;color:#2a4fa8}
+.btn{display:block;width:100%;padding:14px;margin:8px 0;border:0;border-radius:12px;font-size:17px;background:#2a4fa8;color:#fff}
+.sub{background:#fff;color:#2a4fa8;border:2px solid #2a4fa8}
+.card{background:#fff;border-radius:12px;padding:14px;margin:10px 0;box-shadow:0 2px 6px #0001}
+.en{font-size:20px;font-weight:bold}.ja{color:#666;font-size:14px}
+.ok{color:#178a3c;font-weight:bold}.ng{color:#c0392b;font-weight:bold}
+#mic{background:#e8453c;font-size:20px}
+</style></head><body>
+<h1>🗣 しゃべって英会話</h1>
+<div id="app"></div>
+<script>
+const S={
+"空港 チェックイン":[
+["Hello. May I see your passport, please?","パスポートを見せてください","Sure, here you are.",["here","sure","yes"]],
+["Where are you flying to today?","今日はどちらへ？","I'm flying to New York.",["to","flying","going"]],
+["Do you have any bags to check?","預ける荷物はありますか？","Yes, I have one bag.",["bag","yes","no","one","two"]],
+["Would you like a window or aisle seat?","窓側と通路側どちらがいいですか？","A window seat, please.",["window","aisle"]]],
+"ホテル":[
+["Good evening. Do you have a reservation?","予約はありますか？","Yes, under the name Murayama.",["yes","name","reservation"]],
+["How many nights will you stay?","何泊されますか？","Three nights.",["night"]],
+["Would you like breakfast included?","朝食はつけますか？","Yes, please.",["yes","no","please"]]],
+"レストラン":[
+["Hi! How many people?","何名様ですか？","Two people, please.",["one","two","three","four","people"]],
+["Are you ready to order?","ご注文はお決まりですか？","I'd like the steak, please.",["like","have","please"]],
+["How would you like your steak?","焼き加減は？","Medium, please.",["rare","medium","well"]],
+["Anything to drink?","お飲み物は？","Just water, please.",["water","coffee","beer","tea","juice"]]],
+"仕事 自己紹介":[
+["Nice to meet you. Could you introduce yourself?","自己紹介をお願いします","Nice to meet you. I'm Akira.",["i'm","i am","name"]],
+["What do you do?","お仕事は何ですか？","I run my own company.",["work","company","i'm","i am"]],
+["How long have you been doing that?","どのくらい続けていますか？","For about ten years.",["year","month","since"]]],
+"仕事 会議":[
+["Shall we get started?","始めましょうか？","Yes, let's begin.",["yes","let's","sure"]],
+["What do you think about this plan?","この計画をどう思いますか？","I think it's a good idea.",["think","good","idea","agree"]],
+["Do you have any questions?","質問はありますか？","No, it's all clear. Thank you.",["no","yes","question","clear"]]]
+};
+const app=document.getElementById('app');
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function say(t){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=0.9;speechSynthesis.speak(u);}
+function home(){app.innerHTML='<p style="text-align:center">練習したい場面をえらんでね</p>';
+const nb=document.createElement('button');nb.className='btn';nb.style.background='#e08a00';nb.textContent='📰 今日のニュースで話す';nb.onclick=news;app.appendChild(nb);
+Object.keys(S).filter(k=>!k.startsWith('📰')).forEach(k=>{const b=document.createElement('button');b.className='btn';b.textContent=k;b.onclick=()=>play(k,0,0);app.appendChild(b);});}
+function play(k,i,score){const L=S[k];if(i>=L.length){app.innerHTML=`<div class="card"><p class="en">おつかれさま！</p><p>${L.length}問中 ${score}問 うまく言えました</p></div><button class="btn" onclick="home()">場面をえらぶ</button>`;return;}
+const [en,ja,ans,kw]=L[i];
+app.innerHTML=`<div class="card"><div class="ja">${k}　${i+1}/${L.length}</div><p class="en">${en}</p><p class="ja">${ja}</p></div>
+<button class="btn sub" id="again">🔊 もう一度聞く</button>
+<button class="btn" id="mic">🎤 話す</button>
+<div id="res"></div>
+<button class="btn sub" id="hint">💡 答えの例を見る</button>
+<button class="btn sub" id="next">次へ ▶</button>
+<button class="btn sub" onclick="home()">やめる</button>`;
+say(en);let got=0;
+again.onclick=()=>say(en);
+hint.onclick=()=>{res.innerHTML=`<div class="card">例：<b>${ans}</b></div>`;say(ans);};
+next.onclick=()=>play(k,i+1,score+got);
+mic.onclick=()=>{if(!SR){res.innerHTML='<p class="ng">このブラウザは音声入力に対応していません。Chromeで開いてください。</p>';return;}
+const r=new SR();r.lang='en-US';mic.textContent='👂 聞いています…';
+r.onresult=e=>{const t=e.results[0][0].transcript;const ok=kw.some(w=>t.toLowerCase().includes(w));
+if(ok)got=1;res.innerHTML=`<div class="card">あなた：「${t}」<br>${ok?'<span class="ok">Good! 伝わります</span>':'<span class="ng">おしい！答えの例を見てみよう</span>'}</div>`;};
+r.onend=()=>mic.textContent='🎤 話す';r.start();};}
+
+async function news(){app.innerHTML='<p style="text-align:center">今日のニュースを読み込み中…</p>';
+try{const r=await fetch('/api/news');const items=await r.json();
+app.innerHTML='<p style="text-align:center">話したいニュースをえらんでね</p>';
+items.forEach(n=>{const b=document.createElement('button');b.className='btn sub';b.textContent=n.title;b.onclick=()=>newsTalk(n);app.appendChild(b);});
+const h=document.createElement('button');h.className='btn';h.textContent='もどる';h.onclick=home;app.appendChild(h);}
+catch(e){app.innerHTML='<p class="ng">ニュースを読み込めませんでした</p><button class="btn" onclick="home()">もどる</button>';}}
+function newsTalk(n){const k='📰 '+n.title;
+S[k]=[
+[`Here is today's news. ${n.title}. ${n.desc} Have you heard about this?`,"このニュース、聞いたことありますか？","Yes, I saw it this morning. / No, this is new to me.",["yes","no","heard","saw","new"]],
+["What do you think about this news?","このニュースをどう思いますか？","I think it's very important.",["think","important","interesting","surprised","good","bad"]],
+["Why do you think so?","なぜそう思いますか？","Because it affects many people.",["because","so","people"]],
+["Do you think this will affect Japan?","日本にも影響があると思いますか？","Yes, I think it will.",["yes","no","think","maybe","japan"]]];
+play(k,0,0);}
+home();
+</script></body></html>
