@@ -40,7 +40,14 @@ const S={
 };
 const app=document.getElementById('app');
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-function say(t){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=0.9;speechSynthesis.speak(u);}
+let speakingUtterance=null;
+function say(t){
+const synth=window.speechSynthesis;if(!synth||typeof SpeechSynthesisUtterance==='undefined')return;
+const speak=()=>{const u=new SpeechSynthesisUtterance(t);const voices=synth.getVoices();
+u.voice=voices.find(v=>v.lang==='en-US')||voices.find(v=>v.lang&&v.lang.startsWith('en'))||null;
+u.lang='en-US';u.rate=0.9;u.volume=1;
+u.onend=u.onerror=()=>{speakingUtterance=null;};speakingUtterance=u;synth.resume();synth.speak(u);};
+if(synth.speaking||synth.pending){synth.cancel();setTimeout(speak,120);}else{speak();}}
 function home(){app.innerHTML='<p style="text-align:center">練習したい場面をえらんでね</p>';
 const nb=document.createElement('button');nb.className='btn';nb.style.background='#e08a00';nb.textContent='📰 今日のニュースで話す';nb.onclick=news;app.appendChild(nb);
 Object.keys(S).filter(k=>!k.startsWith('📰')).forEach(k=>{const b=document.createElement('button');b.className='btn';b.textContent=k;b.onclick=()=>play(k,0,0);app.appendChild(b);});}
@@ -78,3 +85,4 @@ S[k]=[
 play(k,0,0);}
 home();
 </script></body></html>
+
